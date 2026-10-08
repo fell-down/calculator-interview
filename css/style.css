@@ -331,3 +331,50 @@ button:disabled,
     cursor: not-allowed !important;  /* 鼠标变成禁止符号 */
     /* 注意：已经按照学长要求删除了 pointer-events: none; */
 }
+// ==========================================
+// 新功能：输入长度限制（结合禁用状态）
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // 精准读取显示区，解决把副屏文字算入长度的问题
+    const displayElement = document.querySelector('#display-main');
+    if (!displayElement) {
+        console.warn("未找到显示区元素 #display-main");
+        return;
+    }
+
+    const MAX_LENGTH = 12; // 限制最大长度为12位
+
+    // 使用更稳健的方式识别按键，避免类名不匹配的问题
+    const allButtons = document.querySelectorAll('button');
+    const digitButtons = Array.from(allButtons).filter(btn => /^[0-9.]$/.test(btn.textContent.trim()));
+    const clearButtons = Array.from(allButtons).filter(btn => ['C', 'CE', '⌫'].includes(btn.textContent.trim()));
+
+    function checkLength() {
+        // 兼容 div 的 textContent 和 input 的 value
+        const currentText = displayElement.textContent !== undefined ? displayElement.textContent.trim() : displayElement.value;
+        const isMaxReached = currentText && currentText.length >= MAX_LENGTH;
+
+        digitButtons.forEach(btn => {
+            btn.disabled = isMaxReached;
+        });
+    }
+
+    // 监听点击事件（事件委托，最安全的方式）
+    document.body.addEventListener('click', (e) => {
+        const targetButton = e.target.closest('button');
+        if (!targetButton) return;
+
+        const btnText = targetButton.textContent.trim();
+
+        // 如果点击的是数字键或小数点，等待显示区更新后检查长度
+        if (/^[0-9.]$/.test(btnText)) {
+            setTimeout(checkLength, 20); 
+        } 
+        // 如果点击的是清除/退格键，恢复数字键的启用状态
+        else if (['C', 'CE', '⌫'].includes(btnText)) {
+            setTimeout(() => {
+                digitButtons.forEach(btn => btn.disabled = false);
+            }, 20);
+        }
+    });
+});
